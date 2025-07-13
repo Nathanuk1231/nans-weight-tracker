@@ -176,9 +176,10 @@
 
       const start = weights[0].kg;
       const current = weights[weights.length - 1].kg;
-      const diff = (start - current).toFixed(1);
+      const diffKg = (start - current);
+      const diffLb = (diffKg * 2.20462).toFixed(1);
 
-      lossInfo.textContent = `You've ${diff >= 0 ? 'lost' : 'gained'} ${Math.abs(diff)} kg`;
+      lossInfo.textContent = `You've ${diffLb >= 0 ? 'lost' : 'gained'} ${Math.abs(diffLb)} lb`;
 
       historyList.innerHTML = '';
       weights.slice().reverse().forEach(entry => {
