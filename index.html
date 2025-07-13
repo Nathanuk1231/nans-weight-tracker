@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nan's Weight Tracker (St & Lb)</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f3f3f3;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .tracker {
+      max-width: 400px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 18px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      text-align: center;
+    }
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .keypad button {
+      font-size: 20px;
+      padding: 15px;
+      border: none;
+      border-radius: 6px;
+      background: #ddd;
+      cursor: pointer;
+    }
+    .keypad button:hover {
+      background: #ccc;
+    }
+    button.action {
+      width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+    button.reset-btn {
+      background: #f44336;
+      margin-top: 10px;
+    }
+    .loss-info {
+      text-align: center;
+      font-size: 18px;
+      margin-top: 20px;
+    }
+    .history {
+      margin-top: 30px;
+    }
+    .entry {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <h1>Nan's Weight Tracker</h1>
+  <div class="tracker">
+    <div class="input-group">
+      <input id="stoneInput" placeholder="St" readonly onclick="setFocus('stone')" />
+      <input id="poundInput" placeholder="Lb" readonly onclick="setFocus('pound')" />
+    </div>
+
+    <div class="keypad">
+      <button onclick="appendDigit(1)">1</button>
+      <button onclick="appendDigit(2)">2</button>
+      <button onclick="appendDigit(3)">3</button>
+      <button onclick="appendDigit(4)">4</button>
+      <button onclick="appendDigit(5)">5</button>
+      <button onclick="appendDigit(6)">6</button>
+      <button onclick="appendDigit(7)">7</button>
+      <button onclick="appendDigit(8)">8</button>
+      <button onclick="appendDigit(9)">9</button>
+      <button onclick="clearInput()">C</button>
+      <button onclick="appendDigit(0)">0</button>
+      <button onclick="backspace()">←</button>
+    </div>
+
+    <button class="action" onclick="addWeight()">Add Weight</button>
+    <div class="loss-info" id="lossInfo">No data yet.</div>
+
+    <div class="history" id="historySection" style="display: none;">
+      <h2>Weight History</h2>
+      <div id="historyList"></div>
+      <button class="reset-btn action" onclick="resetData()">Reset All</button>
+    </div>
+  </div>
+
+  <script>
+    let weights = JSON.parse(localStorage.getItem('weights') || '[]');
+    let activeField = 'stone';
+
+    function setFocus(field) {
+      activeField = field;
+    }
+
+    function appendDigit(digit) {
+      const input = document.getElementById(activeField + 'Input');
+      input.value += digit;
+    }
+
+    function clearInput() {
+      document.getElementById(activeField + 'Input').value = '';
+    }
+
+    function backspace() {
+      const input = document.getElementById(activeField + 'Input');
+      input.value = input.value.slice(0, -1);
+    }
+
+    function stonesToKg(st, lb) {
+      const totalPounds = (parseInt(st) || 0) * 14 + (parseInt(lb) || 0);
+      return (totalPounds * 0.453592).toFixed(2); // kg
+    }
+
+    function addWeight() {
+      const st = document.getElementById('stoneInput').value;
+      const lb = document.getElementById('poundInput').value;
+
+      if (st === '' && lb === '') {
+        alert('Enter weight in stones and/or pounds.');
+        return;
+      }
+
+      const kg = parseFloat(stonesToKg(st, lb));
+      const date = new Date().toLocaleDateString();
+      weights.push({ date, kg });
+      localStorage.setItem('weights', JSON.stringify(weights));
+
+      document.getElementById('stoneInput').value = '';
+      document.getElementById('poundInput').value = '';
+      render();
+    }
+
+    function render() {
+      const lossInfo = document.getElementById('lossInfo');
+      const historyList = document.getElementById('historyList');
+      const historySection = document.getElementById('historySection');
+
+      if (weights.length === 0) {
+        lossInfo.textContent = 'No data yet.';
+        historySection.style.display = 'none';
+        return;
+      }
+
+      const start = weights[0].kg;
+      const current = weights[weights.length - 1].kg;
+      const diff = (start - current).toFixed(1);
+
+      lossInfo.textContent = `You've ${diff >= 0 ? 'lost' : 'gained'} ${Math.abs(diff)} kg`;
+
+      historyList.innerHTML = '';
+      weights.slice().reverse().forEach(entry => {
+        const st = Math.floor(entry.kg / 6.35029);
+        const lb = Math.round((entry.kg / 0.453592) % 14);
+        const div = document.createElement('div');
+        div.className = 'entry';
+        div.innerHTML = `<span>${entry.date}</span><span>${st}st ${lb}lb</span>`;
+        historyList.appendChild(div);
+      });
+
+      historySection.style.display = 'block';
+    }
+
+    function resetData() {
+      if (confirm('Are you sure you want to clear all data?')) {
+        weights = [];
+        localStorage.removeItem('weights');
+        render();
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
